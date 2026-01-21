@@ -811,13 +811,13 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
     const hasVideo = trackInfo.videoNow === 'yes' && trackInfo.videoUrl;
     if (videoEl) {
       // Очищаем обработчики
+      videoEl.onprogress = null;
       videoEl.oncanplaythrough = null;
       videoEl.onerror = null;
 
       if (hasVideo) {
-        // Проверяем, не загружено ли уже это видео
-        const currentBlobUrl = videoEl.dataset.originalUrl;
-        const isNewVideo = currentBlobUrl !== trackInfo.videoUrl;
+        const currentVideoUrl = videoEl.dataset.videoUrl;
+        const isNewVideo = currentVideoUrl !== trackInfo.videoUrl;
 
         if (isNewVideo) {
           // Показываем обложку пока видео загружается
@@ -829,69 +829,58 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
           videoEl.style.display = 'none';
           videoEl.pause();
 
-          // Освобождаем предыдущий Blob URL
-          if (videoEl.src && videoEl.src.startsWith('blob:')) {
-            URL.revokeObjectURL(videoEl.src);
-          }
-
           // Сохраняем URL для сравнения
           const videoUrl = trackInfo.videoUrl;
-          videoEl.dataset.originalUrl = videoUrl;
+          videoEl.dataset.videoUrl = videoUrl;
 
-          // Предзагрузка видео полностью через fetch
-          fetch(videoUrl)
-            .then(response => {
-              if (!response.ok) throw new Error('Network error');
-              return response.blob();
-            })
-            .then(blob => {
-              // Проверяем, что трек не сменился пока загружали
-              if (videoEl.dataset.originalUrl !== videoUrl) {
-                return; // Трек сменился, не показываем старое видео
-              }
+          // Устанавливаем видео
+          videoEl.src = videoUrl;
+          videoEl.loop = true;
+          videoEl.muted = true;
+          videoEl.playsInline = true;
+          videoEl.preload = 'auto';
 
-              // Создаём Blob URL
-              const blobUrl = URL.createObjectURL(blob);
+          // Функция проверки полной буферизации
+          const checkFullyBuffered = () => {
+            if (videoEl.dataset.videoUrl !== videoUrl) return false;
+            if (!videoEl.duration || !isFinite(videoEl.duration)) return false;
+            
+            const buffered = videoEl.buffered;
+            if (buffered.length === 0) return false;
+            
+            // Проверяем, буферизовано ли всё видео
+            const bufferedEnd = buffered.end(buffered.length - 1);
+            return bufferedEnd >= videoEl.duration - 0.5; // С небольшим допуском
+          };
 
-              // Устанавливаем видео
-              videoEl.src = blobUrl;
-              videoEl.loop = true;
-              videoEl.muted = true; // Без звука (звук из аудио потока)
-              videoEl.playsInline = true;
-
-              // Когда видео готово к воспроизведению
-              videoEl.oncanplaythrough = () => {
-                // Ещё раз проверяем актуальность
-                if (videoEl.dataset.originalUrl !== videoUrl) return;
-
-                // Плавно переключаем: скрываем обложку, показываем видео
-                if (coverEl) coverEl.style.display = 'none';
-                videoEl.style.display = 'block';
-                videoEl.play().catch(() => {
-                  // Если не удалось воспроизвести, показываем обложку
-                  if (coverEl) coverEl.style.display = 'block';
-                  videoEl.style.display = 'none';
-                });
-              };
-
-              videoEl.onerror = () => {
+          // Показать видео когда полностью загружено
+          const showVideoWhenReady = () => {
+            if (videoEl.dataset.videoUrl !== videoUrl) return;
+            
+            if (checkFullyBuffered()) {
+              if (coverEl) coverEl.style.display = 'none';
+              videoEl.style.display = 'block';
+              videoEl.play().catch(() => {
+                if (coverEl) coverEl.style.display = 'block';
                 videoEl.style.display = 'none';
-                if (coverEl) {
-                  coverEl.style.display = 'block';
-                  coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
-                }
-              };
+              });
+            }
+          };
 
-              videoEl.load();
-            })
-            .catch(() => {
-              // Ошибка загрузки - показываем обложку
-              videoEl.style.display = 'none';
-              if (coverEl) {
-                coverEl.style.display = 'block';
-                coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
-              }
-            });
+          // Отслеживаем прогресс буферизации
+          videoEl.onprogress = showVideoWhenReady;
+          videoEl.oncanplaythrough = showVideoWhenReady;
+
+          videoEl.onerror = () => {
+            videoEl.style.display = 'none';
+            videoEl.dataset.videoUrl = '';
+            if (coverEl) {
+              coverEl.style.display = 'block';
+              coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
+            }
+          };
+
+          videoEl.load();
         } else {
           // Видео уже загружено, просто показываем его
           if (coverEl) coverEl.style.display = 'none';
@@ -903,11 +892,8 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
       } else {
         // Нет видео, показываем обложку
         videoEl.pause();
-        if (videoEl.src && videoEl.src.startsWith('blob:')) {
-          URL.revokeObjectURL(videoEl.src);
-        }
         videoEl.removeAttribute('src');
-        videoEl.dataset.originalUrl = '';
+        videoEl.dataset.videoUrl = '';
         videoEl.style.display = 'none';
         if (coverEl) {
           coverEl.style.display = 'block';
@@ -1170,7 +1156,10 @@ window.playStation = async function(index) {
     }
   }
 
-  if (!streamUrl) return;
+  if (!streamUrl) {
+    console.error('❌ Нет URL потока для станции:', station.name, station);
+    return;
+  }
 
   currentStation = station;
 
@@ -1257,10 +1246,22 @@ window.playStation = async function(index) {
   // Показываем уведомление о смене станции
   showStationNotification(station);
 
+  // Обработчик ошибок аудио
+  audio.onerror = (e) => {
+    const error = audio.error;
+    const errorMessages = {
+      1: 'MEDIA_ERR_ABORTED - загрузка прервана',
+      2: 'MEDIA_ERR_NETWORK - сетевая ошибка',
+      3: 'MEDIA_ERR_DECODE - ошибка декодирования',
+      4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - формат не поддерживается'
+    };
+    console.error('❌ Ошибка аудио:', errorMessages[error?.code] || 'Неизвестная ошибка', 'URL:', streamUrl);
+  };
+
   // Воспроизводим (для не-HLS потоков или нативных HLS)
   if (!isHlsMode || (isHlsMode && audio.canPlayType('application/vnd.apple.mpegurl'))) {
     audio.play().catch(err => {
-      console.error('❌ Ошибка воспроизведения:', err);
+      console.error('❌ Ошибка воспроизведения:', err, 'URL:', streamUrl);
     });
   }
 
