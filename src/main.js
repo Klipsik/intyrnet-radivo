@@ -810,15 +810,20 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
     // Обновляем обложку или видео
     const hasVideo = trackInfo.videoNow === 'yes' && trackInfo.videoUrl;
     if (videoEl) {
-      // Очищаем обработчики
-      videoEl.oncanplaythrough = null;
-      videoEl.onerror = null;
-
       if (hasVideo) {
         const currentVideoUrl = videoEl.dataset.videoUrl;
         const isNewVideo = currentVideoUrl !== trackInfo.videoUrl;
 
-        if (isNewVideo) {
+        // Если видео уже загружается или показывается - не трогаем
+        if (!isNewVideo) {
+          // Видео уже загружено/загружается, ничего не делаем
+        } else {
+          // Новое видео - загружаем
+          // Очищаем обработчики
+          videoEl.oncanplaythrough = null;
+          videoEl.onerror = null;
+          videoEl.onended = null;
+
           // Показываем обложку пока видео загружается
           if (coverEl) {
             coverEl.style.display = 'block';
@@ -831,6 +836,7 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
           // Сохраняем URL для сравнения
           const videoUrl = trackInfo.videoUrl;
           videoEl.dataset.videoUrl = videoUrl;
+          videoEl.dataset.videoShown = 'false';
 
           // Загружаем видео через Rust proxy (полностью, потом показываем)
           invoke('proxy_video', { videoUrl })
@@ -846,21 +852,28 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
 
               videoEl.oncanplaythrough = () => {
                 if (videoEl.dataset.videoUrl !== videoUrl) return;
-                if (coverEl) coverEl.style.display = 'none';
-                videoEl.style.display = 'block';
-                videoEl.play().catch(() => {
-                  if (coverEl) coverEl.style.display = 'block';
-                  videoEl.style.display = 'none';
-                });
+                if (videoEl.dataset.videoShown !== 'true') {
+                  videoEl.dataset.videoShown = 'true';
+                  if (coverEl) coverEl.style.display = 'none';
+                  videoEl.style.display = 'block';
+                  videoEl.play().catch(() => {
+                    if (coverEl) coverEl.style.display = 'block';
+                    videoEl.style.display = 'none';
+                  });
+                }
               };
 
+              // Игнорируем ошибки GStreamer после показа видео
               videoEl.onerror = () => {
-                videoEl.style.display = 'none';
-                videoEl.dataset.videoUrl = '';
-                if (coverEl) {
-                  coverEl.style.display = 'block';
-                  coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
+                if (videoEl.dataset.videoShown !== 'true') {
+                  videoEl.style.display = 'none';
+                  videoEl.dataset.videoUrl = '';
+                  if (coverEl) {
+                    coverEl.style.display = 'block';
+                    coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
+                  }
                 }
+                // После показа - игнорируем ошибки
               };
 
               videoEl.load();
@@ -874,13 +887,6 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
                 coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
               }
             });
-        } else {
-          // Видео уже загружено, просто показываем его
-          if (coverEl) coverEl.style.display = 'none';
-          videoEl.style.display = 'block';
-          if (videoEl.paused) {
-            videoEl.play().catch(() => {});
-          }
         }
       } else {
         // Нет видео, показываем обложку
