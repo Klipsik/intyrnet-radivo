@@ -196,6 +196,43 @@ async fn get_cached_stations(
     }
 }
 
+/// Проксировать видео (скачать полностью и вернуть как base64)
+#[tauri::command]
+async fn proxy_video(video_url: String) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("Ошибка создания клиента: {}", e))?;
+    
+    let response = client
+        .get(&video_url)
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка загрузки видео: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("Сервер вернул ошибку: {}", response.status()));
+    }
+    
+    let content_type = response
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("video/mp4")
+        .to_string();
+    
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Ошибка чтения данных: {}", e))?;
+    
+    use base64::Engine;
+    let base64_data = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    
+    Ok(format!("data:{};base64,{}", content_type, base64_data))
+}
+
 /// Получить URL потока для станции (обновляет токен для 101.ru)
 #[tauri::command]
 async fn get_stream_url(
@@ -736,6 +773,7 @@ fn main() {
             fetch_stations,
             get_cached_stations,
             get_stream_url,
+            proxy_video,
             update_station_metadata,
             get_favorites,
             toggle_favorite,

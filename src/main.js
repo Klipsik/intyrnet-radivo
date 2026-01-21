@@ -811,7 +811,6 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
     const hasVideo = trackInfo.videoNow === 'yes' && trackInfo.videoUrl;
     if (videoEl) {
       // Очищаем обработчики
-      videoEl.onprogress = null;
       videoEl.oncanplaythrough = null;
       videoEl.onerror = null;
 
@@ -833,54 +832,48 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
           const videoUrl = trackInfo.videoUrl;
           videoEl.dataset.videoUrl = videoUrl;
 
-          // Устанавливаем видео
-          videoEl.src = videoUrl;
-          videoEl.loop = true;
-          videoEl.muted = true;
-          videoEl.playsInline = true;
-          videoEl.preload = 'auto';
+          // Загружаем видео через Rust proxy (полностью, потом показываем)
+          invoke('proxy_video', { videoUrl })
+            .then(dataUrl => {
+              // Проверяем актуальность
+              if (videoEl.dataset.videoUrl !== videoUrl) return;
 
-          // Функция проверки полной буферизации
-          const checkFullyBuffered = () => {
-            if (videoEl.dataset.videoUrl !== videoUrl) return false;
-            if (!videoEl.duration || !isFinite(videoEl.duration)) return false;
-            
-            const buffered = videoEl.buffered;
-            if (buffered.length === 0) return false;
-            
-            // Проверяем, буферизовано ли всё видео
-            const bufferedEnd = buffered.end(buffered.length - 1);
-            return bufferedEnd >= videoEl.duration - 0.5; // С небольшим допуском
-          };
+              // Устанавливаем видео
+              videoEl.src = dataUrl;
+              videoEl.loop = true;
+              videoEl.muted = true;
+              videoEl.playsInline = true;
 
-          // Показать видео когда полностью загружено
-          const showVideoWhenReady = () => {
-            if (videoEl.dataset.videoUrl !== videoUrl) return;
-            
-            if (checkFullyBuffered()) {
-              if (coverEl) coverEl.style.display = 'none';
-              videoEl.style.display = 'block';
-              videoEl.play().catch(() => {
-                if (coverEl) coverEl.style.display = 'block';
+              videoEl.oncanplaythrough = () => {
+                if (videoEl.dataset.videoUrl !== videoUrl) return;
+                if (coverEl) coverEl.style.display = 'none';
+                videoEl.style.display = 'block';
+                videoEl.play().catch(() => {
+                  if (coverEl) coverEl.style.display = 'block';
+                  videoEl.style.display = 'none';
+                });
+              };
+
+              videoEl.onerror = () => {
                 videoEl.style.display = 'none';
-              });
-            }
-          };
+                videoEl.dataset.videoUrl = '';
+                if (coverEl) {
+                  coverEl.style.display = 'block';
+                  coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
+                }
+              };
 
-          // Отслеживаем прогресс буферизации
-          videoEl.onprogress = showVideoWhenReady;
-          videoEl.oncanplaythrough = showVideoWhenReady;
-
-          videoEl.onerror = () => {
-            videoEl.style.display = 'none';
-            videoEl.dataset.videoUrl = '';
-            if (coverEl) {
-              coverEl.style.display = 'block';
-              coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
-            }
-          };
-
-          videoEl.load();
+              videoEl.load();
+            })
+            .catch(() => {
+              // Ошибка проксирования - показываем обложку
+              videoEl.style.display = 'none';
+              videoEl.dataset.videoUrl = '';
+              if (coverEl) {
+                coverEl.style.display = 'block';
+                coverEl.src = trackInfo.cover || 'http://localhost:1420/logo.png';
+              }
+            });
         } else {
           // Видео уже загружено, просто показываем его
           if (coverEl) coverEl.style.display = 'none';
