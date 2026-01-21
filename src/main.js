@@ -1191,8 +1191,15 @@ window.playStation = async function(index) {
               hlsPlayer.recoverMediaError();
               break;
             default:
+              // Fallback на MP3 при фатальной ошибке HLS
               hlsPlayer.destroy();
               hlsPlayer = null;
+              const mp3Url = station.stream_url || station.streamUrl;
+              if (mp3Url) {
+                console.error('⚠️ HLS не работает, переключаюсь на MP3:', station.name);
+                audio.src = mp3Url;
+                audio.play().catch(() => {});
+              }
               break;
           }
         }
