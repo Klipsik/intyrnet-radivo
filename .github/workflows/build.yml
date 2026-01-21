@@ -6,6 +6,7 @@ on:
     tags: ['v*']
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -36,7 +37,7 @@ jobs:
           bun-version: latest
 
       - name: Install Rust stable
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
