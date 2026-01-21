@@ -29,16 +29,23 @@
 - 🎚️ **HLS и MP3**: поддержка обоих форматов стриминга
 - 🔊 **Управление громкостью**: с сохранением настроек
 - 💾 **Автосохранение**: запоминает последнюю станцию и настройки
-- 🖥️ **Кроссплатформенность**: Windows и Linux
+- 🖥️ **Кроссплатформенность**: Windows, Linux, macOS
 
 ## 📥 Установка
 
 ### Готовые сборки
 
-Скачайте последнюю версию для вашей платформы:
+Скачайте последнюю версию для вашей платформы из [Releases](https://github.com/Klipsik/intyrnet-radivo/releases):
 
-- **Windows**: `internet-radio_x.x.x_x64-setup.exe` (NSIS) или `internet-radio_x.x.x_x64_en-US.msi`
-- **Linux**: `internet-radio_x.x.x_amd64.deb` (Debian/Ubuntu)
+| Платформа | Формат | Файл |
+|-----------|--------|------|
+| **Windows** | Установщик NSIS | `intyrnet-radivo_x.x.x_x64-setup.exe` |
+| **Windows** | MSI | `intyrnet-radivo_x.x.x_x64_en-US.msi` |
+| **Linux** | DEB (Debian/Ubuntu) | `intyrnet-radivo_x.x.x_amd64.deb` |
+| **Linux** | RPM (Fedora/RHEL) | `intyrnet-radivo-x.x.x-1.x86_64.rpm` |
+| **Linux** | AppImage (универсальный) | `intyrnet-radivo_x.x.x_amd64.AppImage` |
+| **macOS** | DMG (Apple Silicon) | `intyrnet-radivo_x.x.x_aarch64.dmg` |
+| **macOS** | DMG (Intel) | `intyrnet-radivo_x.x.x_x64.dmg` |
 
 ### Системные требования
 
@@ -46,6 +53,13 @@
 ```bash
 sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0 libayatana-appindicator3-1 librsvg2-2
 ```
+
+**Linux (Fedora/RHEL)**:
+```bash
+sudo dnf install webkit2gtk4.1 gtk3 libappindicator-gtk3 librsvg2
+```
+
+**macOS**: macOS 11 Big Sur или новее (Apple Silicon и Intel)
 
 ## 🛠️ Разработка
 
