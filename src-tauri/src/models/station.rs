@@ -35,7 +35,7 @@ pub struct RadioStation {
     pub current_track: Option<String>,
     /// Текущий исполнитель
     pub current_artist: Option<String>,
-    
+
     // === AMG-специфичные поля ===
     /// Slug для API запросов AMG (ruwave, hypefm, etc.)
     pub station_slug: Option<String>,
@@ -51,13 +51,13 @@ pub struct RadioStation {
     pub meta_server: Option<String>,
     /// Ключ для метаданных AMG
     pub meta_key: Option<String>,
-    
+
     // === 101.ru-специфичные поля ===
     /// ID канала на 101.ru
     pub channel_id: Option<u32>,
     /// Категория/жанр на 101.ru
     pub category: Option<String>,
-    
+
     // === Общие поля ===
     /// Количество слушателей
     pub listeners: Option<u32>,
@@ -73,7 +73,7 @@ impl RadioStation {
             RadioSource::Ru101 => format!("ru101_{}", internal_id),
         }
     }
-    
+
     /// Получить внутренний ID без префикса источника
     #[allow(dead_code)]
     pub fn internal_id(&self) -> &str {
@@ -85,7 +85,7 @@ impl RadioStation {
             &self.id
         }
     }
-    
+
     /// Создать новую AMG станцию
     pub fn new_amg(slug: &str, name: &str, stream_url: &str) -> Self {
         Self {
@@ -110,7 +110,7 @@ impl RadioStation {
             stop_at_ms: None,
         }
     }
-    
+
     /// Создать новую 101.ru станцию
     pub fn new_ru101(channel_id: u32, name: &str, stream_url: &str) -> Self {
         Self {

@@ -382,6 +382,47 @@ function resetAudio() {
   audio = null;
 }
 
+/**
+ * Media Session API — уведомление в шторке на мобильных (станция + трек, пауза/воспроизведение)
+ */
+function initMediaSession() {
+  if (!navigator.mediaSession) return;
+
+  navigator.mediaSession.setActionHandler('play', () => {
+    if (audio && currentStation) {
+      audio.play().catch(() => {});
+    }
+  });
+
+  navigator.mediaSession.setActionHandler('pause', () => {
+    if (audio) {
+      audio.pause();
+    }
+  });
+}
+
+/**
+ * Обновить метаданные Media Session (видно в шторке на мобильных)
+ */
+function updateMediaSessionMetadata(trackInfo) {
+  if (!navigator.mediaSession || !trackInfo?.station) return;
+
+  const title = trackInfo.title || 'Прямой эфир';
+  const artist = trackInfo.artist || '';
+  const stationName = trackInfo.station?.name || 'Интырнэт Радиво';
+  const album = stationName;
+
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: artist ? `${artist} - ${title}` : title,
+      artist: stationName,
+      album: album,
+      artwork: trackInfo.cover ? [{ src: trackInfo.cover, sizes: '512x512', type: 'image/jpeg' }] : []
+    });
+    navigator.mediaSession.playbackState = (audio && !audio.paused) ? 'playing' : 'paused';
+  } catch (_) {}
+}
+
 function showInitOverlay() {
   const overlay = document.getElementById('initOverlay');
   if (overlay) {
@@ -934,6 +975,7 @@ function updateCurrentTrackDisplay(trackInfo, withAnimation = false) {
     }
 
     currentTrackInfo = trackInfo;
+    updateMediaSessionMetadata(trackInfo);
   } else {
     // Скрываем контейнер если нет информации
     container.style.display = 'none';
@@ -1978,6 +2020,7 @@ function cleanupDrag() {
 // Инициализация - ждем загрузки DOM
 function initApp() {
   initControls();
+  initMediaSession();
 
   // Инициализация вкладок
   document.querySelectorAll('.tab-button').forEach(btn => {
@@ -2278,3 +2321,52 @@ document.addEventListener('keydown', (e) => {
     window.closeAboutModal();
   }
 });
+
+// ========== Auto-update (desktop only) ==========
+async function isDesktop() {
+  try {
+    const platform = await invoke('get_platform');
+    return ['linux', 'windows', 'darwin'].includes(platform);
+  } catch {
+    return false;
+  }
+}
+
+window.checkForUpdates = async function() {
+  if (!(await isDesktop())) return;
+  const statusEl = document.getElementById('updateStatus');
+  const btn = document.getElementById('checkUpdateBtn');
+  const setStatus = (text, isError = false) => {
+    if (statusEl) {
+      statusEl.textContent = text;
+      statusEl.style.color = isError ? '#ff6b6b' : 'rgba(255,255,255,0.9)';
+    }
+  };
+  try {
+    if (btn) btn.disabled = true;
+    setStatus('Проверка обновлений...');
+    const { check } = await import('@tauri-apps/plugin-updater');
+    const { relaunch } = await import('@tauri-apps/plugin-process');
+    const update = await check();
+    if (!update) {
+      setStatus('Установлена последняя версия');
+      return;
+    }
+    setStatus(`Доступна версия ${update.version}. Загрузка...`);
+    await update.downloadAndInstall((event) => {
+      if (event.event === 'Finished') setStatus('Установка... Перезапуск.');
+    });
+    await relaunch();
+  } catch (err) {
+    setStatus(err?.message || 'Ошибка проверки обновлений', true);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+// Показать блок проверки обновлений только на desktop
+(async () => {
+  if (!(await isDesktop())) return;
+  const updateSection = document.getElementById('updateSection');
+  if (updateSection) updateSection.style.display = 'block';
+})();

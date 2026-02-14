@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "intyrnet-radivo",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "identifier": "com.internetradio.desktop",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -33,6 +33,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "linux": {
       "deb": {
         "depends": [
@@ -62,5 +63,12 @@
       "icons/icon-512.png"
     ]
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENDMjhEQjY4NUU0MkQwNTEKUldSUjBFSmVhTnNvektDMkFSdjFrVllMYnFxODdOd01uSDVQVlBiNzdEMUNML1E0NXMvTU1mTGwK",
+      "endpoints": [
+        "https://github.com/Klipsik/intyrnet-radivo/releases/latest/download/latest.json"
+      ]
+    }
+  }
 }

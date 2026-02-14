@@ -1,6 +1,6 @@
 {
   "name": "radio-app",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Интырнэт Радиво - приложение для прослушивания радио",
   "type": "module",
   "scripts": {
@@ -13,7 +13,9 @@
     "clean": "rm -rf node_modules dist src-tauri/target .vite .tauri && find . -name '*.log' -type f -delete 2>/dev/null || true"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.0.0"
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-process": "2.3",
+    "@tauri-apps/plugin-updater": "2.9"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

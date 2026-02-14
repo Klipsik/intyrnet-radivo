@@ -980,6 +980,17 @@
     .about-button:hover {
       background: rgba(255, 255, 255, 0.25);
     }
+
+    .about-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .update-status {
+      font-size: 12px;
+      margin-top: 8px;
+      min-height: 18px;
+    }
   </style>
 </head>
 <body oncontextmenu="return false;">
@@ -1073,11 +1084,15 @@
     <div class="modal-content">
       <img src="/logo.png" alt="Интырнэт Радиво" class="modal-logo">
       <h2 class="modal-title">Интырнэт Радиво</h2>
-      <div class="modal-version">Версия 1.2.1</div>
+      <div class="modal-version">Версия 1.2.2</div>
       <p class="modal-description">
         Приложение для прослушивания интернет-радиостанций AMG Radio и 101.ru.
         Поддержка HLS и MP3 потоков, уведомления о треках, избранные станции.
       </p>
+      <div class="update-section" id="updateSection" style="margin-bottom: 20px; display: none;">
+        <button class="about-button" id="checkUpdateBtn" onclick="checkForUpdates()">Проверить обновления</button>
+        <div id="updateStatus" class="update-status"></div>
+      </div>
       <div class="modal-contacts">
         <div class="modal-contacts-title">Контакты разработчика</div>
         <div class="modal-contact-item">

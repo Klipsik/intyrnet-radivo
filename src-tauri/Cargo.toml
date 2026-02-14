@@ -1,11 +1,15 @@
 [package]
 name = "intyrnet-radivo"
-version = "1.2.1"
+version = "1.2.2"
 description = "Интырнэт Радиво - приложение для прослушивания радио"
 authors = ["Radio App"]
 license = ""
 repository = ""
 edition = "2021"
+
+[lib]
+name = "intyrnet_radivo_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }
@@ -15,7 +19,7 @@ tauri = { version = "2.0", features = ["tray-icon", "macos-private-api"] }
 tauri-plugin-shell = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = { version = "0.11", features = ["json", "cookies"] }
+reqwest = { version = "0.11", features = ["json", "cookies", "rustls-tls"], default-features = false }
 scraper = "0.20"
 tokio = { version = "1", features = ["full"] }
 url = "2.5"
@@ -23,6 +27,11 @@ async-trait = "0.1"
 urlencoding = "2.1"
 tauri-plugin-single-instance = "2.3.7"
 base64 = "0.22"
+tauri-plugin-process = "2"
 
 [features]
 default = []
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"

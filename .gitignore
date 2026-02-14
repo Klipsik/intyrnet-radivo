@@ -9,6 +9,7 @@ dist-ssr/
 
 # Tauri
 src-tauri/target/
+src-tauri/gen/android/
 src-tauri/gen/schemas/*.json
 !src-tauri/gen/schemas/
 
@@ -40,6 +41,12 @@ lerna-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Signing keys (never commit)
+signing/
+
+# Local documentation
+.docs/
 
 # Environment files
 .env
